@@ -7,11 +7,16 @@
 param(
     [string]$CentralUrl = $env:CENTRAL_URL,
     [string]$AgentToken = $env:AGENT_TOKEN,
-    [string]$ConfigPath = (Join-Path $PSScriptRoot "agent.config.json")
+    [string]$ConfigPath
 )
 
 $ErrorActionPreference = "Stop"
 $AgentVersion = "1.0.0"
+
+$ScriptRoot = $PSScriptRoot
+if (-not $ScriptRoot) { $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path }
+if (-not $ScriptRoot) { $ScriptRoot = "C:\ProgramData\WEBSSL\agent" }
+if (-not $ConfigPath) { $ConfigPath = Join-Path $ScriptRoot "agent.config.json" }
 
 if (Test-Path $ConfigPath) {
     $config = Get-Content -Path $ConfigPath -Raw | ConvertFrom-Json
@@ -19,7 +24,7 @@ if (Test-Path $ConfigPath) {
     if (-not $AgentToken -and $config.AgentToken) { $AgentToken = $config.AgentToken }
 }
 
-$LogPath = Join-Path $PSScriptRoot "agent.log"
+$LogPath = Join-Path $ScriptRoot "agent.log"
 function Write-AgentLog {
     param([string]$Message)
     $line = "{0} {1}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $Message

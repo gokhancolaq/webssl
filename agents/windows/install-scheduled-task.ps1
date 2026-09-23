@@ -34,7 +34,7 @@ $configPath = Join-Path $PSScriptRoot "agent.config.json"
     AgentToken = $AgentToken
 } | ConvertTo-Json | Set-Content -Path $configPath -Encoding UTF8
 
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`""
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -ConfigPath `"$configPath`""
 $trigger = New-ScheduledTaskTrigger -Daily -At $Time
 $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
