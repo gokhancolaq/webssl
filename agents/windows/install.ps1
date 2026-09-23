@@ -1,0 +1,104 @@
+#Requires -Version 5.1
+<#
+.SYNOPSIS
+    Downloads WEBSSL Windows IIS agent from public GitHub and installs the daily task.
+
+    IIS sunucusunda yönetici PowerShell:
+
+        irm https://raw.githubusercontent.com/gokhancolaq/webssl/main/agents/windows/install.ps1 | iex
+#>
+[CmdletBinding()]
+param(
+    [string]$RepoUrl = "https://github.com/gokhancolaq/webssl.git",
+    [string]$ZipUrl = "https://github.com/gokhancolaq/webssl/archive/refs/heads/main.zip",
+    [string]$RawInstallUrl = "https://raw.githubusercontent.com/gokhancolaq/webssl/main/agents/windows/install.ps1",
+    [string]$InstallDir = "$env:ProgramData\WEBSSL\agent",
+    [string]$CentralUrl,
+    [string]$AgentToken,
+    [string]$TaskName = "WEBSSL-IIS-Agent",
+    [string]$Time = "06:00"
+)
+
+$ErrorActionPreference = "Stop"
+try {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+} catch { }
+
+function Test-IsAdmin {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+if (-not (Test-IsAdmin)) {
+    Write-Host "Yonetici yetkisi gerekli, UAC acilacak..."
+    $arg = "-NoProfile -ExecutionPolicy Bypass -Command `"irm '$RawInstallUrl' | iex`""
+    Start-Process -FilePath "powershell.exe" -Verb RunAs -ArgumentList $arg | Out-Null
+    return
+}
+
+if (-not $CentralUrl) {
+    $ip = Read-Host "Dashboard IP veya hostname"
+    if (-not $ip) { throw "IP / hostname bos olamaz." }
+    $port = Read-Host "Dashboard port [8080]"
+    if (-not $port) { $port = "8080" }
+    $CentralUrl = "http://${ip}:${port}"
+}
+if (-not $AgentToken) {
+    $AgentToken = Read-Host "Agent token (dashboard .env icindeki AGENT_TOKEN)"
+    if (-not $AgentToken) { throw "Agent token bos olamaz." }
+}
+
+$tempRoot = Join-Path $env:TEMP ("webssl-agent-" + [guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+
+try {
+    $sourceDir = $null
+    $git = Get-Command git -ErrorAction SilentlyContinue
+    if ($git) {
+        Write-Host "GitHub'dan klonlaniyor..."
+        & git clone --depth 1 $RepoUrl (Join-Path $tempRoot "repo")
+        if ($LASTEXITCODE -ne 0) { throw "git clone basarisiz." }
+        $sourceDir = Join-Path $tempRoot "repo\agents\windows"
+    } else {
+        Write-Host "Git yok, ZIP indiriliyor..."
+        $zipPath = Join-Path $tempRoot "webssl.zip"
+        Invoke-WebRequest -Uri $ZipUrl -OutFile $zipPath -UseBasicParsing
+        Expand-Archive -Path $zipPath -DestinationPath (Join-Path $tempRoot "extract") -Force
+        $sourceDir = Get-ChildItem (Join-Path $tempRoot "extract") -Directory |
+            ForEach-Object { Join-Path $_.FullName "agents\windows" } |
+            Where-Object { Test-Path $_ } |
+            Select-Object -First 1
+    }
+
+    if (-not $sourceDir -or -not (Test-Path (Join-Path $sourceDir "webssl-agent.ps1"))) {
+        throw "Agent dosyalari GitHub paketinde bulunamadi."
+    }
+
+    New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+    Copy-Item (Join-Path $sourceDir "webssl-agent.ps1") (Join-Path $InstallDir "webssl-agent.ps1") -Force
+    Copy-Item (Join-Path $sourceDir "install-scheduled-task.ps1") (Join-Path $InstallDir "install-scheduled-task.ps1") -Force -ErrorAction SilentlyContinue
+
+    $scriptPath = Join-Path $InstallDir "webssl-agent.ps1"
+    $configPath = Join-Path $InstallDir "agent.config.json"
+    @{
+        CentralUrl = $CentralUrl
+        AgentToken = $AgentToken
+    } | ConvertTo-Json | Set-Content -Path $configPath -Encoding UTF8
+
+    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`""
+    $trigger = New-ScheduledTaskTrigger -Daily -At $Time
+    $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
+    Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
+    Start-ScheduledTask -TaskName $TaskName
+
+    Write-Host ""
+    Write-Host "WEBSSL Windows agent kuruldu."
+    Write-Host "Klasor: $InstallDir"
+    Write-Host "Hedef: $CentralUrl"
+    Write-Host "Gorev: $TaskName (her gun $Time)"
+    Write-Host "Ilk tarama baslatildi."
+} finally {
+    Remove-Item -Path $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+}

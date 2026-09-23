@@ -50,14 +50,13 @@ sudo ufw reload
 
 ## 2) Windows agent (IIS)
 
-IIS Management Scripts and Tools (WebAdministration) açık olmalı. `agents/windows` klasörünü IIS sunucusuna kopyalayın.
+IIS Management Scripts and Tools (WebAdministration) açık olmalı. IIS sunucusunda **yönetici PowerShell**:
 
 ```powershell
-cd C:\WEBSSL-agent
-.\install-scheduled-task.ps1
+irm https://raw.githubusercontent.com/gokhancolaq/webssl/main/agents/windows/install.ps1 | iex
 ```
 
-Script dashboard IP, port ve agent token sorar. Her gün 06:00'da çalışır; ilk taramayı hemen gönderir.
+Komut public GitHub'dan agent'ı indirir, dashboard IP / port / token sorar, `C:\ProgramData\WEBSSL\agent` altına kurar ve her gün 06:00 görevi oluşturur. Git yüklü değilse ZIP ile devam eder.
 
 ## 3) Linux agent (nginx)
 
