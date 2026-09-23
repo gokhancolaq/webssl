@@ -14,9 +14,10 @@ class Settings(BaseSettings):
     )
 
     dashboard_user: str = "admin"
-    dashboard_password: str = "changeme"
-    agent_token: str = "changeme-token"
-    secret_key: str = "change-this-secret-key"
+    dashboard_password: str = "CHANGE_ME"
+    agent_token: str = "CHANGE_ME"
+    secret_key: str = "CHANGE_ME"
+    dashboard_url: str = "http://DASHBOARD_IP:8080"
     database_url: str = f"sqlite:///{(CENTRAL_DIR / 'webssl.db').as_posix()}"
     host: str = "0.0.0.0"
     port: int = 8080

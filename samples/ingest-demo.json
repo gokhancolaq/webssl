@@ -35,7 +35,7 @@
     {
       "site_name": "old.example.com",
       "protocol": "https",
-      "ip": "10.0.0.12",
+      "ip": "*",
       "port": 443,
       "hostname": "old.example.com",
       "has_ssl": true,

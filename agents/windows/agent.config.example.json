@@ -1,4 +1,4 @@
 {
-  "CentralUrl": "http://192.168.254.90:8080",
-  "AgentToken": "changeme-token"
+  "CentralUrl": "http://DASHBOARD_IP:8080",
+  "AgentToken": "AGENT_TOKEN"
 }

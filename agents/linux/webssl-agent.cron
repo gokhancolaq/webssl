@@ -1,5 +1,5 @@
 # WEBSSL nginx agent — her gün 06:00
-# /etc/cron.d/webssl-agent olarak kopyalayın veya crontab -e ile ekleyin.
-# AGENT_TOKEN değerini Ubuntu sunucusundaki /opt/webssl/.env ile aynı yapın.
+# Kurulum script'i (install-agent.sh) bu dosyayı sizin girdiğiniz IP ile yazar.
+# Elle kullanacaksanız DASHBOARD_IP ve AGENT_TOKEN değerlerini doldurun.
 
-0 6 * * * root CENTRAL_URL=http://192.168.254.90:8080 AGENT_TOKEN=changeme-token /usr/bin/python3 /opt/webssl-agent/webssl_agent.py >> /var/log/webssl-agent.log 2>&1
+0 6 * * * root CENTRAL_URL=http://DASHBOARD_IP:8080 AGENT_TOKEN=AGENT_TOKEN /usr/bin/python3 /opt/webssl-agent/webssl_agent.py >> /var/log/webssl-agent.log 2>&1

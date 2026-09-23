@@ -1,10 +1,23 @@
 param(
-    [string]$CentralUrl = "http://192.168.254.90:8080",
-    [string]$AgentToken = "changeme-token"
+    [string]$CentralUrl,
+    [string]$AgentToken
 )
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
+
+if (-not $CentralUrl) {
+    $ip = Read-Host "Dashboard IP veya hostname"
+    if (-not $ip) { throw "IP / hostname boş olamaz." }
+    $port = Read-Host "Dashboard port [8080]"
+    if (-not $port) { $port = "8080" }
+    $CentralUrl = "http://${ip}:${port}"
+}
+if (-not $AgentToken) {
+    $AgentToken = Read-Host "Agent token"
+    if (-not $AgentToken) { throw "Agent token boş olamaz." }
+}
+
 $headers = @{ "X-Agent-Token" = $AgentToken }
 
 Get-ChildItem (Join-Path $root "samples\ingest-*.json") | ForEach-Object {
