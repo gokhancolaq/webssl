@@ -1,0 +1,30 @@
+{
+  "hostname": "lnx-web02",
+  "os_type": "linux",
+  "collected_at": "2026-09-23T06:05:00Z",
+  "agent_version": "1.0.0",
+  "bindings": [
+    {
+      "site_name": "portal.example.com",
+      "protocol": "https",
+      "ip": "*",
+      "port": 443,
+      "hostname": "portal.example.com",
+      "has_ssl": true,
+      "cert_subject": "CN=portal.example.com",
+      "cert_issuer": "CN=Let's Encrypt",
+      "fingerprint": "AA:BB:CC:DD:EE:FF",
+      "not_before": "2026-07-01T00:00:00Z",
+      "not_after": "2027-07-01T00:00:00Z",
+      "san": ["portal.example.com"]
+    },
+    {
+      "site_name": "portal.example.com",
+      "protocol": "http",
+      "ip": "*",
+      "port": 80,
+      "hostname": "portal.example.com",
+      "has_ssl": false
+    }
+  ]
+}

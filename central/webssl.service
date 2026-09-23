@@ -1,0 +1,17 @@
+[Unit]
+Description=WEBSSL IIS/nginx SSL dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=webssl
+Group=webssl
+WorkingDirectory=/opt/webssl/central
+EnvironmentFile=/opt/webssl/.env
+ExecStart=/opt/webssl/central/.venv/bin/python /opt/webssl/central/run.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

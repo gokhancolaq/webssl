@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WEBSSL Dashboard</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <div class="brand">
+        <strong>WEBSSL</strong>
+        <span>IIS ve nginx binding / SSL süreleri — günlük agent güncellemesi</span>
+      </div>
+      <form method="post" action="/logout">
+        <button class="btn ghost" type="submit">Çıkış</button>
+      </form>
+    </header>
+
+    <section class="cards">
+      <article class="card">
+        <div class="label">Sunucu</div>
+        <div class="value">{{ summary.servers }}</div>
+      </article>
+      <article class="card">
+        <div class="label">Site</div>
+        <div class="value">{{ summary.sites }}</div>
+      </article>
+      <article class="card">
+        <div class="label">Binding</div>
+        <div class="value">{{ summary.bindings }}</div>
+      </article>
+      <article class="card warn">
+        <div class="label">Süresi dolmak üzere</div>
+        <div class="value">{{ summary.expiring }}</div>
+      </article>
+      <article class="card crit">
+        <div class="label">Süresi dolmuş</div>
+        <div class="value">{{ summary.expired }}</div>
+      </article>
+      <article class="card">
+        <div class="label">Güncellenemeyen sunucu</div>
+        <div class="value">{{ summary.stale }}</div>
+      </article>
+    </section>
+
+    <form class="filters" method="get" action="/">
+      <input type="search" name="q" value="{{ q }}" placeholder="Sunucu, site, hostname, sertifika...">
+      <select name="server">
+        <option value="">Tüm sunucular</option>
+        {% for item in servers %}
+        <option value="{{ item.hostname }}" {% if selected_server == item.hostname %}selected{% endif %}>{{ item.hostname }}</option>
+        {% endfor %}
+      </select>
+      <select name="status">
+        <option value="">Tüm durumlar</option>
+        <option value="expired" {% if selected_status == "expired" %}selected{% endif %}>Süresi dolmuş</option>
+        <option value="critical" {% if selected_status == "critical" %}selected{% endif %}>Kritik (7 gün veya az)</option>
+        <option value="warning" {% if selected_status == "warning" %}selected{% endif %}>Yaklaşıyor (8-30 gün)</option>
+        <option value="ok" {% if selected_status == "ok" %}selected{% endif %}>Sağlıklı</option>
+        <option value="no_ssl" {% if selected_status == "no_ssl" %}selected{% endif %}>SSL yok</option>
+        <option value="stale" {% if selected_status == "stale" %}selected{% endif %}>Güncellenemeyen</option>
+      </select>
+      <button class="btn primary" type="submit">Filtrele</button>
+      <a class="btn ghost" href="/">Sıfırla</a>
+    </form>
+
+    <div class="table-wrap">
+      {% if rows %}
+      <table>
+        <thead>
+          <tr>
+            <th>Sunucu</th>
+            <th>Site</th>
+            <th>Binding</th>
+            <th>Sertifika</th>
+            <th>Bitiş</th>
+            <th>Kalan gün</th>
+            <th>Durum</th>
+            <th>Son güncelleme</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td>
+              <strong>{{ row.server_name }}</strong>
+              <div class="muted small">{{ row.os_type }}</div>
+            </td>
+            <td>{{ row.site_name or "—" }}</td>
+            <td>
+              <div>{{ row.protocol }} {{ row.ip }}:{{ row.port }}</div>
+              <div class="muted small">{{ row.hostname or "—" }}</div>
+            </td>
+            <td>
+              {% if row.has_ssl %}
+              <div>{{ row.cert_subject or "—" }}</div>
+              <div class="muted small">{{ row.cert_issuer }}</div>
+              {% if row.san %}<div class="muted small">SAN: {{ row.san }}</div>{% endif %}
+              {% if row.fingerprint %}<div class="muted small">{{ row.fingerprint }}</div>{% endif %}
+              {% else %}
+              <span class="muted">SSL yok</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if row.not_after %}
+              {{ row.not_after|date }}
+              <div class="muted small">başlangıç {{ row.not_before|date }}</div>
+              {% else %}
+              —
+              {% endif %}
+            </td>
+            <td>{% if row.days_remaining is not none %}{{ row.days_remaining }}{% else %}—{% endif %}</td>
+            <td>
+              <span class="badge {{ row.status }}">{{ row.status_label }}</span>
+              {% if row.stale %}<span class="badge stale">stale</span>{% endif %}
+            </td>
+            <td>{{ row.last_seen|dt }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">Kayıt yok. Agent'ları kurup ilk ingest'i gönderin veya filtreleri temizleyin.</div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

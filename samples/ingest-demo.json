@@ -1,0 +1,58 @@
+{
+  "hostname": "web01",
+  "os_type": "windows",
+  "collected_at": "2026-09-23T06:00:00Z",
+  "agent_version": "1.0.0",
+  "bindings": [
+    {
+      "site_name": "contoso.com",
+      "protocol": "https",
+      "ip": "*",
+      "port": 443,
+      "hostname": "www.contoso.com",
+      "has_ssl": true,
+      "cert_subject": "CN=www.contoso.com",
+      "cert_issuer": "CN=Let's Encrypt",
+      "fingerprint": "AB:CD:EF:01:23:45",
+      "not_before": "2026-01-01T00:00:00Z",
+      "not_after": "2026-10-01T00:00:00Z",
+      "san": ["www.contoso.com", "contoso.com"]
+    },
+    {
+      "site_name": "intranet.local",
+      "protocol": "https",
+      "ip": "*",
+      "port": 443,
+      "hostname": "intranet.local",
+      "has_ssl": true,
+      "cert_subject": "CN=intranet.local",
+      "cert_issuer": "CN=Corp-CA",
+      "fingerprint": "11:22:33:44:55:66",
+      "not_before": "2025-09-01T00:00:00Z",
+      "not_after": "2026-09-26T00:00:00Z",
+      "san": ["intranet.local"]
+    },
+    {
+      "site_name": "old.example.com",
+      "protocol": "https",
+      "ip": "10.0.0.12",
+      "port": 443,
+      "hostname": "old.example.com",
+      "has_ssl": true,
+      "cert_subject": "CN=old.example.com",
+      "cert_issuer": "CN=OldCA",
+      "fingerprint": "DE:AD:BE:EF",
+      "not_before": "2024-01-01T00:00:00Z",
+      "not_after": "2026-01-01T00:00:00Z",
+      "san": ["old.example.com"]
+    },
+    {
+      "site_name": "http-only.local",
+      "protocol": "http",
+      "ip": "*",
+      "port": 80,
+      "hostname": "http-only.local",
+      "has_ssl": false
+    }
+  ]
+}
