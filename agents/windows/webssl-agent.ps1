@@ -167,19 +167,49 @@ Get-Website | ForEach-Object {
     }
 }
 
-$payload = @{
-    hostname      = $env:COMPUTERNAME
-    os_type       = "windows"
-    collected_at  = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-    agent_version = $AgentVersion
-    bindings      = @($bindings)
+function Escape-JsonText {
+    param([string]$Text)
+    if ($null -eq $Text) { return "" }
+    return $Text.Replace('\', '\\').Replace('"', '\"').Replace("`r", '\r').Replace("`n", '\n').Replace("`t", '\t')
 }
 
-# JavaScriptSerializer keeps single-item arrays as JSON arrays (ConvertTo-Json in Windows PowerShell 5.1 does not).
-Add-Type -AssemblyName System.Web.Extensions
-$serializer = New-Object System.Web.Script.Serialization.JavaScriptSerializer
-$serializer.MaxJsonLength = [int]::MaxValue
-$body = $serializer.Serialize($payload)
+function New-JsonString {
+    param($Value)
+    if ($null -eq $Value) { return "null" }
+    return '"' + (Escape-JsonText ([string]$Value)) + '"'
+}
+
+function New-BindingJson {
+    param($Row)
+    $sanItems = @()
+    foreach ($name in @($Row.san)) {
+        if ($name) { $sanItems += (New-JsonString ([string]$name)) }
+    }
+    $hasSsl = if ($Row.has_ssl) { "true" } else { "false" }
+    return ('{{"site_name":{0},"protocol":{1},"ip":{2},"port":{3},"hostname":{4},"has_ssl":{5},"cert_subject":{6},"cert_issuer":{7},"fingerprint":{8},"not_before":{9},"not_after":{10},"san":[{11}]}}' -f `
+        (New-JsonString $Row.site_name),
+        (New-JsonString $Row.protocol),
+        (New-JsonString $Row.ip),
+        ([int]$Row.port),
+        (New-JsonString $Row.hostname),
+        $hasSsl,
+        (New-JsonString $Row.cert_subject),
+        (New-JsonString $Row.cert_issuer),
+        (New-JsonString $Row.fingerprint),
+        (New-JsonString $Row.not_before),
+        (New-JsonString $Row.not_after),
+        ($sanItems -join ","))
+}
+
+$bindingJsonItems = @()
+foreach ($row in @($bindings)) {
+    $bindingJsonItems += (New-BindingJson $row)
+}
+$body = ('{{"hostname":{0},"os_type":"windows","collected_at":{1},"agent_version":{2},"bindings":[{3}]}}' -f `
+    (New-JsonString $env:COMPUTERNAME),
+    (New-JsonString ((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"))),
+    (New-JsonString $AgentVersion),
+    ($bindingJsonItems -join ","))
 
 Write-AgentLog ("Toplanan binding: {0}" -f @($bindings).Count)
 
