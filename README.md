@@ -53,7 +53,7 @@ sudo ufw reload
 IIS Management Scripts and Tools (WebAdministration) açık olmalı. IIS sunucusunda **yönetici PowerShell**:
 
 ```powershell
-irm https://raw.githubusercontent.com/gokhancolaq/webssl/main/agents/windows/install.ps1 | iex
+iex (irm https://raw.githubusercontent.com/gokhancolaq/webssl/main/agents/windows/install.ps1)
 ```
 
 Komut public GitHub'dan agent'ı indirir, dashboard IP / port / token sorar, `C:\ProgramData\WEBSSL\agent` altına kurar ve her gün 06:00 görevi oluşturur. Git yüklü değilse ZIP ile devam eder.

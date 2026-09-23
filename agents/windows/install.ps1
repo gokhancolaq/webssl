@@ -5,7 +5,7 @@
 
     IIS sunucusunda yönetici PowerShell:
 
-        irm https://raw.githubusercontent.com/gokhancolaq/webssl/main/agents/windows/install.ps1 | iex
+        iex (irm https://raw.githubusercontent.com/gokhancolaq/webssl/main/agents/windows/install.ps1)
 #>
 [CmdletBinding()]
 param(
@@ -24,29 +24,58 @@ try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 } catch { }
 
+# irm | iex stdin'i kilitler; dosyadan tekrar çalıştır ki Read-Host token alsın.
+$scriptFile = $PSCommandPath
+if (-not $scriptFile) { $scriptFile = $MyInvocation.MyCommand.Path }
+if (-not $scriptFile -or $scriptFile -eq "") {
+    $local = Join-Path $env:TEMP "webssl-win-install.ps1"
+    Invoke-WebRequest -Uri $RawInstallUrl -OutFile $local -UseBasicParsing
+    $arg = "-NoProfile -ExecutionPolicy Bypass -File `"$local`""
+    if ($CentralUrl) { $arg += " -CentralUrl `"$CentralUrl`"" }
+    if ($AgentToken) { $arg += " -AgentToken `"$AgentToken`"" }
+    Start-Process -FilePath "powershell.exe" -ArgumentList $arg -Wait -NoNewWindow
+    return
+}
+
 function Test-IsAdmin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal($identity)
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
+function Read-Required {
+    param(
+        [string]$Prompt,
+        [string]$Default = ""
+    )
+    while ($true) {
+        $label = $Prompt
+        if ($Default) { $label = "$Prompt [$Default]" }
+        $value = Read-Host $label
+        if ($null -eq $value) { $value = "" }
+        $value = $value.Trim()
+        if (-not $value -and $Default) { return $Default }
+        if ($value) { return $value }
+        Write-Host "Bos birakilamaz, tekrar deneyin."
+    }
+}
+
 if (-not (Test-IsAdmin)) {
     Write-Host "Yonetici yetkisi gerekli, UAC acilacak..."
-    $arg = "-NoProfile -ExecutionPolicy Bypass -Command `"irm '$RawInstallUrl' | iex`""
-    Start-Process -FilePath "powershell.exe" -Verb RunAs -ArgumentList $arg | Out-Null
+    $arg = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptFile`""
+    Start-Process -FilePath "powershell.exe" -Verb RunAs -ArgumentList $arg -Wait
     return
 }
 
 if (-not $CentralUrl) {
-    $ip = Read-Host "Dashboard IP veya hostname"
-    if (-not $ip) { throw "IP / hostname bos olamaz." }
-    $port = Read-Host "Dashboard port [8080]"
-    if (-not $port) { $port = "8080" }
+    $ip = Read-Required "Dashboard IP veya hostname"
+    $port = Read-Required "Dashboard port" "8080"
     $CentralUrl = "http://${ip}:${port}"
 }
 if (-not $AgentToken) {
-    $AgentToken = Read-Host "Agent token (dashboard .env icindeki AGENT_TOKEN)"
-    if (-not $AgentToken) { throw "Agent token bos olamaz." }
+    Write-Host "Ubuntu dashboard sunucusundan token:"
+    Write-Host "  sudo grep AGENT_TOKEN /opt/webssl/.env"
+    $AgentToken = Read-Required "Agent token"
 }
 
 $tempRoot = Join-Path $env:TEMP ("webssl-agent-" + [guid]::NewGuid().ToString("N"))
