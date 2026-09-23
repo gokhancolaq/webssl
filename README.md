@@ -19,15 +19,19 @@ Her Windows / Linux sunucuya küçük bir agent kurulur. Agent günde bir kez si
 
 ## 1) Ubuntu merkeze kurulum (192.168.254.90)
 
-Windows’ta bu klasör git reposu. Ubuntu sunucuda git ile çekin (URL’yi kendi remote’unuzla değiştirin):
+Private GitHub repo: https://github.com/gokhancolaq/webssl
+
+Ubuntu sunucuda:
 
 ```bash
 sudo apt-get update
 sudo apt-get install -y git
-sudo git clone GIT_REPO_URL /opt/webssl
+sudo git clone https://github.com/gokhancolaq/webssl.git /opt/webssl
 sudo bash /opt/webssl/scripts/install-ubuntu.sh
 sudo nano /opt/webssl/.env
 ```
+
+Repo private olduğu için Ubuntu’da GitHub erişimi gerekir (`gh auth login` veya HTTPS token / deploy key).
 
 `.env` içinde mutlaka değiştirin:
 
