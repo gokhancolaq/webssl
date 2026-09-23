@@ -19,6 +19,14 @@ if (Test-Path $ConfigPath) {
     if (-not $AgentToken -and $config.AgentToken) { $AgentToken = $config.AgentToken }
 }
 
+$LogPath = Join-Path $PSScriptRoot "agent.log"
+function Write-AgentLog {
+    param([string]$Message)
+    $line = "{0} {1}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $Message
+    Add-Content -Path $LogPath -Value $line -Encoding UTF8
+    Write-Host $line
+}
+
 if (-not $CentralUrl) { throw "CENTRAL_URL or agent.config.json CentralUrl is required." }
 if (-not $AgentToken) { throw "AGENT_TOKEN or agent.config.json AgentToken is required." }
 
@@ -93,8 +101,19 @@ function Resolve-Thumbprint {
     return $null
 }
 
+$ingestUrl = $CentralUrl.TrimEnd("/") + "/api/ingest"
+Write-AgentLog "Basladi. Hedef=$ingestUrl"
+
+try {
+    $health = Invoke-RestMethod -Method Get -Uri ($CentralUrl.TrimEnd("/") + "/api/health")
+    Write-AgentLog ("Dashboard health OK: {0}" -f $health.time)
+} catch {
+    Write-AgentLog ("Dashboard ULASILAMIYOR: {0}" -f $_.Exception.Message)
+    throw "Dashboard'a ulasilamiyor ($CentralUrl). Windows sunucusundan port 8080 acik mi, ufw/firewall?"
+}
+
 if (-not (Get-Module -ListAvailable -Name WebAdministration)) {
-    throw "WebAdministration module not found. Install IIS Management Scripts and Tools."
+    throw "WebAdministration yok. IIS Management Scripts and Tools kurun."
 }
 Import-Module WebAdministration -ErrorAction Stop
 
@@ -157,15 +176,18 @@ $serializer = New-Object System.Web.Script.Serialization.JavaScriptSerializer
 $serializer.MaxJsonLength = [int]::MaxValue
 $body = $serializer.Serialize($payload)
 
-$ingestUrl = $CentralUrl.TrimEnd("/") + "/api/ingest"
+Write-AgentLog ("Toplanan binding: {0}" -f @($bindings).Count)
+
 $headers = @{
     "X-Agent-Token" = $AgentToken
 }
 
 try {
     $response = Invoke-RestMethod -Method Post -Uri $ingestUrl -Headers $headers -ContentType "application/json; charset=utf-8" -Body ([System.Text.Encoding]::UTF8.GetBytes($body))
-    Write-Output ("WEBSSL ingest OK: {0} bindings={1}" -f $response.hostname, $response.bindings)
+    Write-AgentLog ("WEBSSL ingest OK: {0} bindings={1}" -f $response.hostname, $response.bindings)
 } catch {
-    Write-Error ("WEBSSL ingest failed: {0}" -f $_.Exception.Message)
+    $detail = $_.Exception.Message
+    if ($_.ErrorDetails -and $_.ErrorDetails.Message) { $detail += " | " + $_.ErrorDetails.Message }
+    Write-AgentLog ("WEBSSL ingest failed: {0}" -f $detail)
     throw
 }

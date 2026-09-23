@@ -120,14 +120,30 @@ try {
     $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
     Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
-    Start-ScheduledTask -TaskName $TaskName
+
+    Write-Host ""
+    Write-Host "Dashboard kontrol ediliyor: $CentralUrl"
+    try {
+        $health = Invoke-RestMethod -Method Get -Uri ($CentralUrl.TrimEnd("/") + "/api/health")
+        Write-Host ("Health OK: {0}" -f $health.time)
+    } catch {
+        Write-Host "UYARI: Dashboard'a su an ulasilamiyor: $($_.Exception.Message)"
+        Write-Host "Ubuntu'da servis ve 8080 firewall acik olmali."
+    }
+
+    Write-Host "Ilk tarama simdi bu pencerede calisiyor..."
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptPath
+    if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) {
+        Write-Host "Ilk tarama HATA ile bitti. Log: $(Join-Path $InstallDir 'agent.log')"
+        throw "Agent dashboard'a veri gonderemedi."
+    }
 
     Write-Host ""
     Write-Host "WEBSSL Windows agent kuruldu."
     Write-Host "Klasor: $InstallDir"
     Write-Host "Hedef: $CentralUrl"
     Write-Host "Gorev: $TaskName (her gun $Time)"
-    Write-Host "Ilk tarama baslatildi."
+    Write-Host "Dashboard'u yenileyin: $CentralUrl"
 } finally {
     Remove-Item -Path $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
